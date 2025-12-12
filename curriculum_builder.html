@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRAS Media - Curriculum Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Card Styles */
+        .category-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+        .category-card:hover {
+            border-color: #4f46e5; /* Indigo/Brand hover */
+        }
+        
+        /* Input Styles */
+        .ghost-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            color: white;
+        }
+        .ghost-input::placeholder { color: #64748b; }
+        .ghost-input:focus { background: rgba(0,0,0,0.2); }
+
+        .bullet-point {
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        .bullet-point::before {
+            content: "•";
+            position: absolute;
+            left: 0.5rem;
+            color: #4f46e5; /* Brand bullet */
+            font-weight: bold;
+        }
+
+        /* Modal Animation */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.2s; }
+        .modal-exit { opacity: 1; transform: scale(1); }
+        .modal-exit-active { opacity: 0; transform: scale(0.95); transition: all 0.2s; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden font-sans">
+
+    <!-- HEADER -->
+    <header class="h-20 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 z-10 shrink-0">
+        <div class="flex items-center gap-4">
+            <!-- BRANDING LOGO -->
+            <img src="https://lh3.googleusercontent.com/a/ACg8ocLJcQRpo7A__yZh5lmRFAJ9F7nXXLOsvhOesbwLlyVsvbXSJRY=s192-c-mo" 
+                 alt="FRAS Media Logo" 
+                 class="h-14 w-14 flex-shrink-0 drop-shadow-md rounded-full bg-transparent object-cover">
+            
+            <div class="flex flex-col justify-center">
+                <h1 class="text-white font-bold tracking-wide text-lg leading-tight">F.R.A.S Media <br> Creative Academy</h1>
+            </div>
+
+            <div class="h-8 w-px bg-slate-700 mx-2"></div>
+
+            <span class="text-slate-500 text-xs hidden md:block uppercase tracking-widest font-semibold">
+                Curriculum Skeleton Builder Tool
+            </span>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- File Inputs -->
+            <input type="file" id="import-input" accept=".skel,.json,.rtf,.txt" style="display:none" onchange="handleFileLoad(this)">
+            
+            <!-- Project Management -->
+            <button onclick="document.getElementById('import-input').click()" 
+                    class="group flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-4 py-2 rounded-lg border border-slate-700 transition-all duration-200 hover:border-slate-600 hover:shadow-md" 
+                    title="Load an existing project file">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="transition-transform group-hover:scale-110"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <span class="font-semibold text-sm">Load</span>
+            </button>
+
+            <button onclick="saveProjectSkel()" 
+                    class="group flex items-center gap-2 bg-teal-900/40 hover:bg-teal-600/20 text-teal-400 hover:text-teal-200 px-4 py-2 rounded-lg border border-teal-900/50 hover:border-teal-500/50 transition-all duration-200 hover:shadow-[0_0_15px_rgba(45,212,191,0.1)]" 
+                    title="Save your work as a .skel file to edit later">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="transition-transform group-hover:scale-110"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span class="font-semibold text-sm">Save Project</span>
+            </button>
+
+            <div class="h-8 w-px bg-slate-800 mx-2"></div>
+
+            <!-- New Category -->
+            <button onclick="openModal()" 
+                    class="group flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5">
+                <span class="bg-slate-700 group-hover:bg-slate-600 rounded p-0.5 transition-colors">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </span>
+                <span class="font-bold text-sm">New Category</span>
+            </button>
+            
+            <!-- Export Doc -->
+            <button onclick="exportRTF()" 
+                    class="group flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-[#4f46e5] hover:from-indigo-500 hover:to-[#4338ca] text-white px-5 py-2 rounded-lg font-bold shadow-lg shadow-indigo-900/40 transition-all duration-200 hover:shadow-indigo-900/60 hover:-translate-y-0.5 border border-indigo-500/50">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span>Export Doc (.RTF)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN BOARD (Horizontal Scroll) -->
+    <main class="flex-1 overflow-x-auto overflow-y-hidden p-6 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
+        <div class="flex gap-6 h-full pb-4" id="board-container">
+            <!-- Categories generate here -->
+        </div>
+    </main>
+
+    <!-- NEW CATEGORY MODAL -->
+    <div id="cat-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-xl shadow-2xl p-6 transform transition-all scale-100">
+            <h3 class="text-xl font-bold text-white mb-1">Add New Category</h3>
+            <p class="text-slate-400 text-sm mb-4">Define a new major expanse of 3D modeling.</p>
+            
+            <form onsubmit="confirmAddCategory(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Category Title</label>
+                    <input type="text" id="new-cat-title" required placeholder="e.g. Rigging Basics" class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-[#4f46e5] outline-none transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Justification (Required)</label>
+                    <p class="text-[10px] text-slate-500 mb-2">Explain why this category is essential for the curriculum.</p>
+                    <textarea id="new-cat-desc" required rows="3" placeholder="e.g. This is necessary because trainees need to understand how meshes deform before they model complex characters..." class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white focus:border-[#4f46e5] outline-none transition-colors"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded font-bold text-sm shadow-lg">Create Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TEMPLATE FOR CATEGORY CARD (Hidden) -->
+    <template id="card-template">
+        <div class="category-card w-80 md:w-96 rounded-lg flex flex-col h-full shrink-0 shadow-2xl bg-slate-800">
+            <!-- Header -->
+            <div class="p-4 border-b border-slate-700 bg-slate-900/50 flex justify-between items-start group">
+                <div class="flex-1 pr-2">
+                    <h2 class="text-lg font-bold text-white uppercase tracking-wide category-title break-words leading-tight">Category Name</h2>
+                    <p class="text-xs text-slate-400 mt-2 category-desc italic leading-snug">Description of this category.</p>
+                </div>
+                <button class="delete-cat-btn text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-2 text-lg font-bold" title="Delete Category">×</button>
+            </div>
+
+            <!-- List Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-2 points-container bg-slate-900/20">
+                <!-- Bullet points go here -->
+            </div>
+
+            <!-- Footer / Input -->
+            <div class="p-3 border-t border-slate-700 bg-slate-800">
+                <form class="add-point-form">
+                    <div class="relative">
+                        <input type="text" 
+                               maxlength="140"
+                               class="ghost-input bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:border-[#4f46e5] transition-colors placeholder-slate-500 pr-10" 
+                               placeholder="Add skill (Max 140 chars)..." 
+                               autocomplete="off">
+                        <span class="char-count absolute right-2 top-2.5 text-[10px] text-slate-600 font-mono">140</span>
+                    </div>
+                </form>
+                <p class="text-[10px] text-slate-500 mt-2 text-center opacity-75">Keep it brief. No rambling.</p>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // --- DATA ---
+        let isDirty = false;
+        
+        let projectData = [
+            {
+                id: 1,
+                title: "UV & Texturing",
+                description: "Unwrapping, Seams, Material Creation & Resolution.",
+                points: [
+                    "Source realistic materials for PBR textures",
+                    "Draw textures for NPR pipelines",
+                    "Digitally paint textures for Stylized assets",
+                    "Understand resolution and texture density"
+                ]
+            },
+            {
+                id: 2,
+                title: "Stylized (NPR) vs Realistic (PBR)",
+                description: "The core visual divide in 3D modeling.",
+                points: [
+                    "Understand physical lighting vs painted lighting",
+                    "Modeling for silhouette (NPR) vs modeling for detail (PBR)"
+                ]
+            },
+            {
+                id: 3,
+                title: "Concepts / Turn Arounds",
+                description: "Translating 2D designs into 3D space.",
+                points: [
+                    "Read a character sheet correctly",
+                    "Align image planes in 3D space"
+                ]
+            },
+            {
+                id: 4,
+                title: "Organic vs Hard Surface",
+                description: "Specialization pathways: Creatures vs Machines.",
+                points: [
+                    "Identify topology flows for organic deformation",
+                    "Manage boolean operations for hard surface forms"
+                ]
+            },
+            {
+                id: 5,
+                title: "Topology & Deformation",
+                description: "Ensuring the model can move/animate without breaking.",
+                points: [
+                    "Retopology: Converting sculpts to clean meshes",
+                    "Creating proper Edge Loops for joints (Knees/Elbows)",
+                    "Avoiding N-Gons and Poles in deformation zones",
+                    "Quad-based vs Triangle-based modeling workflows"
+                ]
+            },
+            {
+                id: 6,
+                title: "Optimization & Game Readiness",
+                description: "Budgeting polygons for clients or game engines.",
+                points: [
+                    "High-Poly to Low-Poly Baking workflows",
+                    "Creating LODs (Levels of Detail)",
+                    "Fixing Face Orientation (Normals) and Doubles",
+                    "Managing Poly-counts / Vertex Budgets"
+                ]
+            },
+            {
+                id: 7,
+                title: "Rendering & Presentation",
+                description: "The Generalist's finish line: Showcasing the work.",
+                points: [
+                    "Basic 3-Point Lighting setups",
+                    "Setting up Cameras and Focal Lengths for portraits",
+                    "Simple Rigging/Posing (Transposing) for display",
+                    "Turntable animation for portfolio"
+                ]
+            }
+        ];
+
+        // --- RENDER ---
+        const board = document.getElementById('board-container');
+        const template = document.getElementById('card-template');
+
+        function render() {
+            board.innerHTML = '';
+            
+            projectData.forEach((cat, catIndex) => {
+                const clone = template.content.cloneNode(true);
+                
+                // Set Header
+                clone.querySelector('.category-title').textContent = cat.title;
+                clone.querySelector('.category-desc').textContent = cat.description;
+                
+                // Delete Category Logic
+                clone.querySelector('.delete-cat-btn').onclick = () => {
+                    if(confirm('Delete the category "' + cat.title + '"?')) {
+                        projectData.splice(catIndex, 1);
+                        markDirty();
+                        render();
+                    }
+                };
+
+                // Render Points
+                const pointsList = clone.querySelector('.points-container');
+                if (cat.points.length === 0) {
+                    pointsList.innerHTML = `<div class="flex flex-col items-center justify-center h-24 text-center text-slate-600 text-xs italic"><span class="text-2xl mb-1 opacity-20">✎</span>Type below to add a skill</div>`;
+                } else {
+                    cat.points.forEach((point, pointIndex) => {
+                        const pEl = document.createElement('div');
+                        pEl.className = "group flex items-start gap-2 text-sm text-slate-300 hover:text-white transition-colors py-1 pl-1 pr-2 rounded hover:bg-slate-700/50";
+                        pEl.innerHTML = `
+                            <span class="text-[#818cf8] font-bold mt-[2px] text-xs">•</span>
+                            <span class="flex-1 leading-relaxed break-words">${point}</span>
+                            <button onclick="removePoint(${catIndex}, ${pointIndex})" class="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 px-1 font-bold text-xs" title="Remove Item">✕</button>
+                        `;
+                        pointsList.appendChild(pEl);
+                    });
+                }
+
+                // Add Point Logic
+                const form = clone.querySelector('.add-point-form');
+                const input = form.querySelector('input');
+                const charCount = clone.querySelector('.char-count');
+                
+                // Character Counter
+                input.oninput = () => {
+                    const remaining = 140 - input.value.length;
+                    charCount.textContent = remaining;
+                    if(remaining < 20) {
+                        charCount.classList.add('text-red-500');
+                        charCount.classList.remove('text-slate-600');
+                    } else {
+                        charCount.classList.remove('text-red-500');
+                        charCount.classList.add('text-slate-600');
+                    }
+                };
+
+                form.onsubmit = (e) => {
+                    e.preventDefault();
+                    const text = input.value.trim();
+                    if (text) {
+                        projectData[catIndex].points.push(text);
+                        markDirty();
+                        render();
+                        // Refocus
+                        setTimeout(() => {
+                            const newInputs = document.querySelectorAll('.ghost-input');
+                            if(newInputs[catIndex]) {
+                                newInputs[catIndex].focus();
+                                newInputs[catIndex].scrollIntoView({ block: "center", behavior: "smooth" });
+                            }
+                        }, 50);
+                    }
+                };
+
+                board.appendChild(clone);
+            });
+
+            // Add "New Category" Placeholder
+            const addCard = document.createElement('div');
+            addCard.className = "w-80 md:w-96 rounded-lg shrink-0 border-2 border-dashed border-slate-700 flex items-center justify-center hover:border-[#4f46e5] hover:bg-slate-900/50 cursor-pointer transition-all opacity-60 hover:opacity-100 group";
+            addCard.style.minHeight = "200px";
+            addCard.onclick = openModal;
+            addCard.innerHTML = `
+                <div class="text-center">
+                    <div class="text-4xl text-slate-600 group-hover:text-[#4f46e5] mb-2 transition-colors">+</div>
+                    <div class="font-bold text-slate-500 group-hover:text-white transition-colors">Add Category</div>
+                </div>
+            `;
+            board.appendChild(addCard);
+        }
+
+        // --- ACTIONS ---
+
+        function markDirty() {
+            isDirty = true;
+        }
+
+        function removePoint(catIndex, pointIndex) {
+            projectData[catIndex].points.splice(pointIndex, 1);
+            markDirty();
+            render();
+        }
+
+        // MODAL LOGIC
+        function openModal() {
+            document.getElementById('new-cat-title').value = "";
+            document.getElementById('new-cat-desc').value = "";
+            document.getElementById('cat-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('new-cat-title').focus(), 100);
+        }
+
+        function closeModal() {
+            document.getElementById('cat-modal').classList.add('hidden');
+        }
+
+        function confirmAddCategory(e) {
+            e.preventDefault();
+            const title = document.getElementById('new-cat-title').value;
+            const desc = document.getElementById('new-cat-desc').value;
+
+            // HTML validation handles "required", but safe check:
+            if (!title || !desc) {
+                alert("Both Title and Description are required.");
+                return;
+            }
+
+            projectData.push({
+                id: Date.now(),
+                title: title,
+                description: desc,
+                points: []
+            });
+            
+            markDirty();
+            closeModal();
+            render();
+
+            setTimeout(() => {
+                board.scrollLeft = board.scrollWidth;
+            }, 100);
+        }
+
+        // --- IMPORT / EXPORT (.SKEL & .RTF) ---
+
+        // 1. Save Project as .skel (JSON)
+        function saveProjectSkel() {
+            if (projectData.length === 0) {
+                alert("Nothing to save!");
+                return;
+            }
+            const jsonString = JSON.stringify(projectData, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "FRAS_Academy_Curriculum.skel";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            isDirty = false;
+        }
+
+        // 2. Export Document as .rtf (Readable)
+        function exportRTF() {
+            if (projectData.length === 0) {
+                alert("Nothing to export!");
+                return;
+            }
+
+            let rtf = `{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}`;
+            rtf += `{\\colortbl;\\red0\\green0\\blue0;\\red67\\green56\\blue202;\\red100\\green100\\blue100;}`;
+            
+            // Document Title
+            rtf += `\\pard\\sa200\\sl276\\slmult1\\b\\f0\\fs36 FRAS Media Creative Academy\\b0\\par`;
+            rtf += `\\fs28 3D Modeling Course Curriculum Skeleton\\par`;
+            rtf += `\\fs20 Generated: ${new Date().toLocaleDateString()}\\par`;
+            rtf += `______________________________________________________________________________\\par\\par`;
+
+            // Loop Categories
+            projectData.forEach((cat, i) => {
+                // Header Format: \b\fs28 1. Title \b0
+                rtf += `\\pard\\sa100\\sb200`;
+                rtf += `\\b\\fs28 ${i + 1}. ${escapeRTF(cat.title)}\\b0\\par`;
+                
+                // Description Format: \i\fs22 (Description)\i0
+                if(cat.description) {
+                    rtf += `\\i\\fs22 (${escapeRTF(cat.description)})\\i0\\par`;
+                }
+                rtf += `\\par`;
+
+                // Points Format: \bullet \cf0 Text
+                if(cat.points.length > 0) {
+                    cat.points.forEach(point => {
+                        rtf += `\\pard\\li720\\sa100 \\cf2\\bullet \\cf0  ${escapeRTF(point)}\\par`;
+                    });
+                } else {
+                    rtf += `\\pard\\li720\\sa100 [No fundamentals listed yet]\\par`;
+                }
+                
+                rtf += `\\par`;
+            });
+
+            rtf += `}`;
+
+            const blob = new Blob([rtf], { type: "application/rtf" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "FRAS_Academy_Curriculum.rtf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function escapeRTF(str) {
+            if(!str) return "";
+            return str.replace(/[\\{}]/g, (match) => "\\" + match)
+                      .replace(/\n/g, "\\par ");
+        }
+
+        // 3. Import Logic (Handles .skel JSON AND .rtf fallback)
+        function handleFileLoad(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                
+                // Check extension to decide strategy
+                if (file.name.endsWith('.skel') || file.name.endsWith('.json')) {
+                    loadSkeletonJSON(text);
+                } else {
+                    // Fallback to RTF parser if they try to load an RTF
+                    parseRTFAndLoad(text);
+                }
+                inputElement.value = ''; // Reset
+            };
+            reader.readAsText(file);
+        }
+
+        function loadSkeletonJSON(jsonString) {
+            try {
+                const newData = JSON.parse(jsonString);
+                if (Array.isArray(newData) && newData.length > 0 && newData[0].title) {
+                    if(confirm(`Loaded Project ".skel" successfully! Found ${newData.length} categories. Replace current board?`)) {
+                        projectData = newData;
+                        render();
+                        isDirty = false;
+                    }
+                } else {
+                    alert("Invalid .skel file format.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error parsing .skel file. Ensure it is a valid JSON format.");
+            }
+        }
+
+        // Legacy RTF Parser (Backup - Pattern Matcher)
+        function parseRTFAndLoad(rtfContent) {
+            try {
+                const newData = [];
+                let currentCat = null;
+                
+                // Decode Hex
+                let content = rtfContent.replace(/\\'([0-9a-fA-F]{2})/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+                
+                // Split lines
+                const lines = content.split(/\\par/);
+
+                lines.forEach(line => {
+                    let cleanLine = line.replace(/\{[^{}]+\}/g, '')
+                                          .replace(/\\[a-zA-Z0-9-]+\s?/g, ' ') 
+                                          .replace(/[{}]/g, '').trim();
+
+                    if (!cleanLine) return;
+
+                    const catMatch = cleanLine.match(/^(\d+)\.\s+(.+)/);
+                    if (catMatch) {
+                        if (currentCat) newData.push(currentCat);
+                        currentCat = { id: Date.now() + Math.random(), title: catMatch[2].trim(), description: "", points: [] };
+                    }
+                    else if (currentCat && cleanLine.startsWith('(') && cleanLine.endsWith(')')) {
+                        currentCat.description = cleanLine.slice(1, -1).trim();
+                    }
+                    else if (currentCat) {
+                        const isBullet = cleanLine.startsWith('•') || cleanLine.startsWith('-') || cleanLine.includes(String.fromCharCode(149));
+                        if (isBullet) {
+                             let pointText = cleanLine.replace(/^[•\-\s]+/, '').trim();
+                             if(pointText && !pointText.includes('No fundamentals')) currentCat.points.push(pointText);
+                        }
+                    }
+                });
+
+                if (currentCat) newData.push(currentCat);
+
+                if (newData.length > 0) {
+                    if(confirm(`RTF Import: Found ${newData.length} categories. Load?`)) {
+                        projectData = newData;
+                        render();
+                        isDirty = false;
+                    }
+                } else {
+                    alert("Could not detect curriculum structure in this file.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error parsing file.");
+            }
+        }
+
+        // --- SAFETY ---
+        window.onbeforeunload = function() {
+            if (isDirty) {
+                return "You have unsaved changes. Are you sure you want to leave?";
+            }
+        };
+
+        // Init
+        document.addEventListener('DOMContentLoaded', render);
+
+    </script>
+</body>
+</html>
