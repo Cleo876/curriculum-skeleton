@@ -65,7 +65,7 @@
                  class="h-14 w-14 flex-shrink-0 drop-shadow-md rounded-full bg-transparent object-cover">
             
             <div class="flex flex-col justify-center">
-                <h1 class="text-white font-bold tracking-wide text-lg leading-tight">F.R.A.S Media <br> Creative Academy</h1>
+                <h1 class="text-white font-bold tracking-wide text-sm leading-none">F.R.A.S Media <br> Creative Academy</h1>
             </div>
 
             <div class="h-8 w-px bg-slate-700 mx-2"></div>
@@ -146,6 +146,18 @@
         </div>
     </div>
 
+    <!-- GENERIC MODAL (Used for Confirmations and Alerts) -->
+    <div id="generic-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-xl shadow-2xl p-6 transform transition-all scale-100 text-center">
+            <h3 id="generic-title" class="text-xl font-bold text-white mb-2"></h3>
+            <p id="generic-msg" class="text-slate-400 text-sm mb-6 leading-relaxed"></p>
+            
+            <div id="generic-actions" class="flex justify-center gap-3">
+                <!-- Buttons injected via JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- TEMPLATE FOR CATEGORY CARD (Hidden) -->
     <template id="card-template">
         <div class="category-card w-80 md:w-96 rounded-lg flex flex-col h-full shrink-0 shadow-2xl bg-slate-800">
@@ -155,7 +167,7 @@
                     <h2 class="text-lg font-bold text-white uppercase tracking-wide category-title break-words leading-tight">Category Name</h2>
                     <p class="text-xs text-slate-400 mt-2 category-desc italic leading-snug">Description of this category.</p>
                 </div>
-                <button class="delete-cat-btn text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-2 text-lg font-bold" title="Delete Category">×</button>
+                <button type="button" class="delete-cat-btn text-slate-500 hover:text-red-400 opacity-60 hover:opacity-100 transition-opacity px-2 text-2xl font-bold leading-none self-start" title="Delete Category">×</button>
             </div>
 
             <!-- List Area -->
@@ -259,11 +271,13 @@
         ];
 
         // --- RENDER ---
-        const board = document.getElementById('board-container');
-        const template = document.getElementById('card-template');
-
         function render() {
-            board.innerHTML = '';
+            const board = document.getElementById('board-container');
+            const template = document.getElementById('card-template');
+            
+            if(!board || !template) return;
+
+            board.innerHTML = ''; 
             
             projectData.forEach((cat, catIndex) => {
                 const clone = template.content.cloneNode(true);
@@ -272,14 +286,24 @@
                 clone.querySelector('.category-title').textContent = cat.title;
                 clone.querySelector('.category-desc').textContent = cat.description;
                 
-                // Delete Category Logic
-                clone.querySelector('.delete-cat-btn').onclick = () => {
-                    if(confirm('Delete the category "' + cat.title + '"?')) {
-                        projectData.splice(catIndex, 1);
-                        markDirty();
-                        render();
-                    }
-                };
+                // Delete Category Logic (Using Custom Modal)
+                const deleteBtn = clone.querySelector('.delete-cat-btn');
+                if (deleteBtn) {
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation(); 
+                        showConfirm(
+                            'Delete Category?', 
+                            `Are you sure you want to delete "${cat.title}"? This cannot be undone.`, 
+                            () => {
+                                projectData.splice(catIndex, 1);
+                                markDirty();
+                                render();
+                            },
+                            "Delete",
+                            true // isDestructive
+                        );
+                    };
+                }
 
                 // Render Points
                 const pointsList = clone.querySelector('.points-container');
@@ -303,7 +327,6 @@
                 const input = form.querySelector('input');
                 const charCount = clone.querySelector('.char-count');
                 
-                // Character Counter
                 input.oninput = () => {
                     const remaining = 140 - input.value.length;
                     charCount.textContent = remaining;
@@ -351,6 +374,50 @@
             board.appendChild(addCard);
         }
 
+        // --- CUSTOM MODAL LOGIC (Fix for "Delete Not Working") ---
+
+        function showConfirm(title, msg, onConfirm, confirmText = "Confirm", isDestructive = false) {
+            const modal = document.getElementById('generic-modal');
+            const titleEl = document.getElementById('generic-title');
+            const msgEl = document.getElementById('generic-msg');
+            const actions = document.getElementById('generic-actions');
+
+            titleEl.textContent = title;
+            msgEl.textContent = msg;
+
+            const btnClass = isDestructive 
+                ? "bg-red-600 hover:bg-red-500" 
+                : "bg-[#4f46e5] hover:bg-[#4338ca]";
+
+            actions.innerHTML = `
+                <button onclick="closeGenericModal()" class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium transition-colors">Cancel</button>
+                <button id="generic-confirm-btn" class="px-6 py-2 ${btnClass} text-white rounded font-bold text-sm shadow-lg transition-colors">${confirmText}</button>
+            `;
+
+            // Bind the actual confirm action
+            document.getElementById('generic-confirm-btn').onclick = () => {
+                onConfirm();
+                closeGenericModal();
+            };
+
+            modal.classList.remove('hidden');
+        }
+
+        function showAlert(title, msg) {
+            const modal = document.getElementById('generic-modal');
+            document.getElementById('generic-title').textContent = title;
+            document.getElementById('generic-msg').textContent = msg;
+            const actions = document.getElementById('generic-actions');
+            actions.innerHTML = `
+                <button onclick="closeGenericModal()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold text-sm shadow-lg transition-colors">OK</button>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function closeGenericModal() {
+            document.getElementById('generic-modal').classList.add('hidden');
+        }
+
         // --- ACTIONS ---
 
         function markDirty() {
@@ -363,7 +430,7 @@
             render();
         }
 
-        // MODAL LOGIC
+        // MODAL LOGIC (Category Form)
         function openModal() {
             document.getElementById('new-cat-title').value = "";
             document.getElementById('new-cat-desc').value = "";
@@ -380,9 +447,8 @@
             const title = document.getElementById('new-cat-title').value;
             const desc = document.getElementById('new-cat-desc').value;
 
-            // HTML validation handles "required", but safe check:
             if (!title || !desc) {
-                alert("Both Title and Description are required.");
+                showAlert("Validation Error", "Both Title and Description are required.");
                 return;
             }
 
@@ -398,16 +464,16 @@
             render();
 
             setTimeout(() => {
-                board.scrollLeft = board.scrollWidth;
+                const board = document.getElementById('board-container');
+                if (board) board.scrollLeft = board.scrollWidth;
             }, 100);
         }
 
         // --- IMPORT / EXPORT (.SKEL & .RTF) ---
 
-        // 1. Save Project as .skel (JSON)
         function saveProjectSkel() {
             if (projectData.length === 0) {
-                alert("Nothing to save!");
+                showAlert("Empty Project", "Nothing to save!");
                 return;
             }
             const jsonString = JSON.stringify(projectData, null, 2);
@@ -422,35 +488,29 @@
             isDirty = false;
         }
 
-        // 2. Export Document as .rtf (Readable)
         function exportRTF() {
             if (projectData.length === 0) {
-                alert("Nothing to export!");
+                showAlert("Empty Project", "Nothing to export!");
                 return;
             }
 
             let rtf = `{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}`;
             rtf += `{\\colortbl;\\red0\\green0\\blue0;\\red67\\green56\\blue202;\\red100\\green100\\blue100;}`;
             
-            // Document Title
             rtf += `\\pard\\sa200\\sl276\\slmult1\\b\\f0\\fs36 FRAS Media Creative Academy\\b0\\par`;
             rtf += `\\fs28 3D Modeling Course Curriculum Skeleton\\par`;
             rtf += `\\fs20 Generated: ${new Date().toLocaleDateString()}\\par`;
             rtf += `______________________________________________________________________________\\par\\par`;
 
-            // Loop Categories
             projectData.forEach((cat, i) => {
-                // Header Format: \b\fs28 1. Title \b0
                 rtf += `\\pard\\sa100\\sb200`;
                 rtf += `\\b\\fs28 ${i + 1}. ${escapeRTF(cat.title)}\\b0\\par`;
                 
-                // Description Format: \i\fs22 (Description)\i0
                 if(cat.description) {
                     rtf += `\\i\\fs22 (${escapeRTF(cat.description)})\\i0\\par`;
                 }
                 rtf += `\\par`;
 
-                // Points Format: \bullet \cf0 Text
                 if(cat.points.length > 0) {
                     cat.points.forEach(point => {
                         rtf += `\\pard\\li720\\sa100 \\cf2\\bullet \\cf0  ${escapeRTF(point)}\\par`;
@@ -472,6 +532,8 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            
+            isDirty = false;
         }
 
         function escapeRTF(str) {
@@ -480,7 +542,7 @@
                       .replace(/\n/g, "\\par ");
         }
 
-        // 3. Import Logic (Handles .skel JSON AND .rtf fallback)
+        // 3. Import Logic
         function handleFileLoad(inputElement) {
             const file = inputElement.files[0];
             if (!file) return;
@@ -488,15 +550,14 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const text = e.target.result;
+                const lowerName = file.name.toLowerCase();
                 
-                // Check extension to decide strategy
-                if (file.name.endsWith('.skel') || file.name.endsWith('.json')) {
+                if (lowerName.endsWith('.skel') || lowerName.endsWith('.json')) {
                     loadSkeletonJSON(text);
                 } else {
-                    // Fallback to RTF parser if they try to load an RTF
                     parseRTFAndLoad(text);
                 }
-                inputElement.value = ''; // Reset
+                inputElement.value = ''; 
             };
             reader.readAsText(file);
         }
@@ -504,31 +565,27 @@
         function loadSkeletonJSON(jsonString) {
             try {
                 const newData = JSON.parse(jsonString);
-                if (Array.isArray(newData) && newData.length > 0 && newData[0].title) {
-                    if(confirm(`Loaded Project ".skel" successfully! Found ${newData.length} categories. Replace current board?`)) {
-                        projectData = newData;
-                        render();
-                        isDirty = false;
-                    }
+                
+                if (Array.isArray(newData)) {
+                    // Replaced "confirm" with custom modal for consistency
+                    projectData = newData;
+                    render();
+                    isDirty = false;
                 } else {
-                    alert("Invalid .skel file format.");
+                    showAlert("Invalid File", "Invalid .skel file format. The file must contain a list of categories.");
                 }
             } catch (err) {
                 console.error(err);
-                alert("Error parsing .skel file. Ensure it is a valid JSON format.");
+                showAlert("Error", "Error parsing .skel file. Ensure it is a valid JSON format.");
             }
         }
 
-        // Legacy RTF Parser (Backup - Pattern Matcher)
         function parseRTFAndLoad(rtfContent) {
             try {
                 const newData = [];
                 let currentCat = null;
                 
-                // Decode Hex
                 let content = rtfContent.replace(/\\'([0-9a-fA-F]{2})/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-                
-                // Split lines
                 const lines = content.split(/\\par/);
 
                 lines.forEach(line => {
@@ -558,17 +615,23 @@
                 if (currentCat) newData.push(currentCat);
 
                 if (newData.length > 0) {
-                    if(confirm(`RTF Import: Found ${newData.length} categories. Load?`)) {
-                        projectData = newData;
-                        render();
-                        isDirty = false;
-                    }
+                    showConfirm(
+                        "Import Found", 
+                        `Found ${newData.length} categories in the document. Load them? This replaces current work.`,
+                        () => {
+                            projectData = newData;
+                            render();
+                            isDirty = false;
+                        },
+                        "Load",
+                        false
+                    );
                 } else {
-                    alert("Could not detect curriculum structure in this file.");
+                    showAlert("Import Failed", "Could not detect curriculum structure in this file.");
                 }
             } catch (err) {
                 console.error(err);
-                alert("Error parsing file.");
+                showAlert("Error", "Error parsing file.");
             }
         }
 
